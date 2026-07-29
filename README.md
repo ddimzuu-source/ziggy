@@ -2,7 +2,7 @@
 
 AI agent lokal untuk bantu system administration di CachyOS/Hyprland, jalan sepenuhnya offline pakai Ollama, tanpa API eksternal.
 
-## Buat Ziggy?
+## Buat Apa Ziggy?
 
 CachyOS itu rolling release — breaking changes bisa muncul kapan aja tiap update mingguan (Hyprland syntax berubah, Waybar tiba-tiba dobel instance, udev rules butuh disesuaikan ulang, dll). Ziggy dibangun buat jadi asisten yang paham konteks sistem sendiri: baca config, baca log, dan (nantinya) belajar dari "war story" fix-fix yang pernah gua lakuin, biar bisa bantu diagnosis masalah serupa di masa depan.
 
