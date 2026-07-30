@@ -30,7 +30,7 @@ ziggy/
 ## Roadmap
 
 - [x] **Fase 0** — Setup dasar: ReAct loop sederhana + tool `read_file()`
-- [ ] **Fase 1** — Tools dasar sistem: `run_command()` dengan whitelist aman (`journalctl`, `systemctl status`), `check_updates()` pakai pacman, loop detection
+- [x] **Fase 1** — Tools dasar sistem: `run_command()` dengan whitelist aman (`journalctl`, `systemctl status`), `check_updates()` pakai pacman, loop detection
 - [ ] **Fase 2** — Update handling: `get_changelog()`, `snapshot_config()`, `diff_config_after_update()` untuk nanganin breaking changes rolling release
 - [ ] **Fase 3** — RAG: index "war story" (histori fix udev rules, Hyprland 0.56 breaking changes, Waybar dobel bug) ke vector db
 - [ ] **Fase 4** — Auto-fix dengan approval flow (y/n) sebelum eksekusi apapun
@@ -38,7 +38,18 @@ ziggy/
 
 ## Status Saat Ini
 
-Fase 0 selesai. ReAct loop stabil: model bisa memilih antara memanggil tool atau menjawab langsung, tidak lagi mengarang isi file maupun hasil eksekusi tool yang tidak ada, dan validasi path berhasil menahan percobaan path traversal (`/etc/passwd` ditolak).
+Fase 1 selesai. Agent sekarang punya 3 tools: `read_file`, `run_command` (whitelist ketat, read-only), dan `check_updates` (pacman -Qu). Beberapa safety layer sudah diterapkan:
+
+- **Whitelist command**, bukan blacklist — command dan subcommand harus eksplisit diizinkan
+- **Tidak ada `shell=True`** — command dijalankan sebagai list argumen, terbukti menahan percobaan command injection (`journalctl -xe; rm -rf ~` ditolak)
+- **Safety net level kode** — kata kunci destruktif (restart, install, remove, dll) langsung ditolak sebelum masuk ke model, tidak bergantung 100% pada kepatuhan model
+- **Loop detection** — agent berhenti otomatis kalau mencoba memanggil action yang identik berulang kali
+- **Fallback format** — kalau model gagal mengikuti format ReAct 2x berturut-turut, agent berhenti dengan raw output alih-alih terus mencoba sampai max iteration
+
+### Known Limitations
+
+- Model (`qwen2.5-coder:1.5b`) kadang menambahkan detail kecil yang tidak akurat di narasi jawaban akhir (misal mengklaim "menyimpan log ke file" padahal tool hanya menampilkan output) meski action yang dijalankan sendiri tetap aman dan sesuai whitelist. Ini kandidat kuat untuk diperbaiki lewat RAG di Fase 3, atau evaluasi upgrade model di fase-fase mendatang jika kompleksitas tool bertambah signifikan.
+- Prompt disengaja dijaga pendek (3-4 contoh few-shot) karena model kecil ini cenderung "melanjutkan pola" contoh yang terlalu banyak alih-alih mengikuti instruksi.
 
 ## Jalanin Sendiri
 
