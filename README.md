@@ -51,6 +51,19 @@ Fase 1 selesai. Agent sekarang punya 3 tools: `read_file`, `run_command` (whitel
 - Model (`qwen2.5-coder:1.5b`) kadang menambahkan detail kecil yang tidak akurat di narasi jawaban akhir (misal mengklaim "menyimpan log ke file" padahal tool hanya menampilkan output) meski action yang dijalankan sendiri tetap aman dan sesuai whitelist. Ini kandidat kuat untuk diperbaiki lewat RAG di Fase 3, atau evaluasi upgrade model di fase-fase mendatang jika kompleksitas tool bertambah signifikan.
 - Prompt disengaja dijaga pendek (3-4 contoh few-shot) karena model kecil ini cenderung "melanjutkan pola" contoh yang terlalu banyak alih-alih mengikuti instruksi.
 
+
+---
+
+## Ide Pengembangan Masa Depan (belum dieksekusi)
+
+Catatan ide yang worth dipertimbangkan di fase yang sesuai, bukan komitmen langsung:
+
+- **Plugin/Tool Registry structure** — refactor `tools.py` jadi folder `plugins/` per kategori (pacman, systemd, docker, dll) begitu jumlah tools mulai banyak. Kandidat untuk Fase 5 (showcase), setelah Fase 1-4 selesai dan kebutuhan tool sudah jelas — bukan sekarang, karena migrasi struktur di tengah jalan cuma nambah kerjaan tanpa nambah kapabilitas.
+- **Output terstruktur (JSON) dari tools** — daripada tool selalu return raw string, beberapa tool (terutama `check_updates` dan turunannya di Fase 2) bisa return data terstruktur biar lebih konsisten dibaca model. Dieval ulang saat mulai kerasa perlu.
+- **Approval flow [Y/N] sebelum eksekusi** — sudah jadi rencana di Fase 4, tidak ada perubahan.
+
+Ide lain (Docker manager, Snapshot/Snapper, notifikasi Telegram/Discord, web dashboard, voice assistant) sengaja belum masuk roadmap karena di luar scope inti Ziggy saat ini (fokus: diagnosis & handling breaking changes CachyOS). Bisa dipertimbangkan lagi kalau versi inti sudah stabil dan mau diperluas.
+
 ## Jalanin Sendiri
 
 ```bash
