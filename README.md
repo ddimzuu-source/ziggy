@@ -36,6 +36,10 @@ ziggy/
 - [ ] **Fase 4** — Auto-fix dengan approval flow (y/n) sebelum eksekusi apapun
 - [ ] **Fase 5** — Showcase: README lengkap, commit history rapi, deploy versi kecil ke cloud
 
+## Status Saat Ini
+
+Fase 0 selesai. ReAct loop stabil: model bisa memilih antara memanggil tool atau menjawab langsung, tidak lagi mengarang isi file maupun hasil eksekusi tool yang tidak ada, dan validasi path berhasil menahan percobaan path traversal (`/etc/passwd` ditolak).
+
 ## Jalanin Sendiri
 
 ```bash
