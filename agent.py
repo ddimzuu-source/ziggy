@@ -10,58 +10,76 @@ SYSTEM_PROMPT = """Kamu adalah Ziggy, AI agent asisten Linux di sistem CachyOS/H
 Tools yang tersedia:
 {tools_desc}
 
-Gunakan format PERSIS seperti ini, tanpa teks tambahan apapun.
+Gunakan format PERSIS seperti ini, tanpa teks tambahan apapun:
 
-Jika butuh tool:
 Thought: <alasanmu>
 Action: <nama_tool>
 Action Input: <argumen tool>
 
-Jika sudah cukup info untuk menjawab (tidak perlu tool):
+ATAU jika tidak butuh tool:
+
 Thought: <alasanmu>
 Final Answer: <jawaban>
 
 ATURAN WAJIB:
-- Kata kunci HARUS PERSIS "Final Answer:" (bukan "Jawaban:", bukan "Answer:", bukan terjemahan lain)
-- Kata kunci HARUS PERSIS "Action:" dan "Action Input:"
-- Jangan pernah menulis "Observation:" sendiri, itu akan diisi sistem
-- Setelah Action Input, JANGAN menulis apapun lagi, tunggu observation
-- HANYA gunakan tool yang ADA di daftar tools di atas. JANGAN PERNAH mencoba tool lain
-  (seperti systemctl, apt, dpkg, pip, dll) meskipun tool itu ada di sistem Linux asli.
-- Jika permintaan user butuh kemampuan yang TIDAK ADA di daftar tools (misal: restart
-  service, install package, jalankan command), JANGAN mencoba tool apapun.
-  Langsung jawab dengan jujur menggunakan Final Answer bahwa kamu belum punya
-  kemampuan itu di fase sekarang.
+- Kata kunci HARUS PERSIS "Final Answer:", "Action:", "Action Input:"
+- Jangan menulis "Observation:" sendiri, itu akan diisi sistem
+- Setelah Action Input, JANGAN menulis apapun lagi
+- HANYA gunakan tool yang ADA di daftar tools di atas
+- run_command HANYA untuk command read-only. JANGAN mencoba command yang mengubah
+  state sistem (restart, install, remove, dll) meskipun diminta - langsung jawab
+  jujur belum bisa via Final Answer
+- JANGAN PERNAH menulis "Contoh" atau melanjutkan pola contoh di bawah ini.
+  Contoh HANYA referensi format, bukan template untuk dilanjutkan.
+- JAWAB HANYA untuk pertanyaan user yang sekarang, jangan buat pertanyaan/skenario baru.
 
-Contoh 1 (butuh tool):
-User: Kenapa config hyprland saya error?
-Thought: Saya perlu membaca isi file config untuk tahu isinya.
+Referensi format (jangan ditiru isinya, hanya polanya):
+
+[1] Butuh baca file:
+Thought: Perlu membaca isi file config.
 Action: read_file
 Action Input: /home/drmwnmass/.config/hypr/hyprland.conf
 
-Contoh 2 (tidak butuh tool, pertanyaan umum):
-User: Apa itu Wayland?
-Thought: Ini pertanyaan pengetahuan umum, saya tidak perlu membaca file apapun.
-Final Answer: Wayland adalah protokol display server pengganti X11 di Linux.
+[2] Butuh cek command sistem read-only:
+Thought: Perlu cek status/log lewat command read-only.
+Action: run_command
+Action Input: systemctl status NetworkManager
 
-Contoh 3 (setelah observation, kasih jawaban lengkap):
-Observation: kb_layout = us, bind = SUPER Q exec kitty
-Thought: Saya sudah dapat isi filenya, sekarang saya bisa jawab lengkap.
-Final Answer: Berdasarkan config, keybinding yang ada: SUPER+Q membuka terminal kitty.
+[3] Tidak butuh tool / kemampuan belum ada:
+Thought: Ini pertanyaan umum atau butuh kemampuan yang belum tersedia.
+Final Answer: <jawaban langsung atau pengakuan keterbatasan>
 
-Contoh 4 (butuh kemampuan yang belum ada):
-User: Restart Waybar saya sekarang
-Thought: Saya tidak punya tool untuk menjalankan command sistem seperti restart service.
-Final Answer: Maaf, saya belum punya kemampuan untuk menjalankan command sistem 
-(seperti restart service) di fase pengembangan sekarang. Saat ini saya hanya bisa 
-membaca isi file.
+[4] Cek update package sistem:
+Thought: User tanya soal update, saya bisa cek pakai check_updates.
+Action: check_updates
+Action Input: -
+
+SEKALI LAGI: jawab hanya untuk pertanyaan user berikut ini, jangan menulis contoh tambahan."""
 
 
-Jangan menulis Action dan Final Answer sekaligus."""
+# --- SAFETY NET LEVEL KODE (bukan bergantung ke model) ---
+DESTRUCTIVE_INTENT_KEYWORDS = [
+    "restart", "install", "uninstall", "hapus", "remove", "matikan",
+    "stop", "reboot", "shutdown", "kill", "reinstall", "update sistem",
+    "upgrade", "downgrade",
+]
+
+def check_destructive_intent(query: str) -> str | None:
+    query_lower = query.lower()
+    for kw in DESTRUCTIVE_INTENT_KEYWORDS:
+        if kw in query_lower:
+            return (
+                f"Maaf, permintaan ini mengandung kata '{kw}' yang mengindikasikan "
+                f"perubahan state sistem (restart/install/remove/dll). Ziggy di fase "
+                f"sekarang hanya bisa membaca file dan menjalankan command read-only "
+                f"(cek status, log, package) — belum bisa eksekusi perubahan apapun."
+            )
+    return None
 
 
 def build_tools_desc():
     return "\n".join(f"- {name}: {meta['description']}" for name, meta in TOOLS.items())
+
 
 def call_ollama(messages):
     resp = requests.post(
@@ -71,7 +89,8 @@ def call_ollama(messages):
             "messages": messages,
             "stream": False,
             "options": {
-                "stop": ["\nObservation", "Observation:"]
+                "stop": ["\nObservation", "Observation:"],
+                "temperature": 0, 
             },
         },
         timeout=60,
@@ -79,9 +98,7 @@ def call_ollama(messages):
     resp.raise_for_status()
     return resp.json()["message"]["content"]
 
-
 def parse_step(text):
-    # Normalisasi variasi kata kunci yang sering "ketuker" oleh model kecil
     normalized = re.sub(r"^(Jawaban|Answer)\s*:", "Final Answer:", text, flags=re.MULTILINE)
 
     action_pos = normalized.find("Action:")
@@ -105,37 +122,64 @@ def parse_step(text):
 
 
 def run_agent(user_query: str):
+    early_refusal = check_destructive_intent(user_query)
+    if early_refusal:
+        print(f"\n⚠️  Ditolak di level kode (bukan model): {early_refusal}")
+        return early_refusal
+
     system = SYSTEM_PROMPT.format(tools_desc=build_tools_desc())
     messages = [
         {"role": "system", "content": system},
         {"role": "user", "content": user_query},
     ]
 
+    unknown_count = 0
+    seen_actions = {}
+
     for step in range(MAX_ITERATIONS):
         print(f"\n--- Iterasi {step + 1} ---")
         output = call_ollama(messages)
-        print(output)
 
         parsed = parse_step(output)
         messages.append({"role": "assistant", "content": output})
 
         if parsed["type"] == "final":
-            print(f"\n Final Answer: {parsed['content']}")
+            print(f"✅ Final Answer: {parsed['content']}")
             return parsed["content"]
 
         elif parsed["type"] == "action":
             tool_name = parsed["tool"]
             tool_input = parsed["input"]
+            signature = (tool_name, tool_input)
+
+            print(f"Thought/Action: {output.strip()}")
+
+            if signature in seen_actions:
+                print(f"⚠️  Action '{tool_name}' dengan input yang sama sudah pernah "
+                      f"dipanggil sebelumnya. Menghentikan loop untuk mencegah pengulangan.")
+                previous_observation = seen_actions[signature]
+                return (f"Berdasarkan hasil pengecekan sebelumnya:\n{previous_observation}\n\n"
+                        f"(Catatan: agent berhenti karena mencoba mengulang aksi yang sama.)")
 
             if tool_name not in TOOLS:
                 observation = f"[ERROR] Tool '{tool_name}' tidak dikenal."
             else:
                 observation = TOOLS[tool_name]["function"](tool_input)
 
-            print(f"Observation: {observation[:300]}...")  # dipotong biar ga banjir terminal
+            seen_actions[signature] = observation
+
+            print(f"Observation: {observation[:300]}...")
             messages.append({"role": "user", "content": f"Observation: {observation}"})
+            unknown_count = 0
 
         else:
+            unknown_count += 1
+            print(f"[UNKNOWN FORMAT] Raw output: {repr(output)}")
+
+            if unknown_count >= 2:
+                print("⚠️  Model nyangkut format 2x berturut-turut, pakai raw output sebagai jawaban.")
+                return output.strip()
+
             messages.append({
                 "role": "user",
                 "content": "Format kamu salah. Ikuti format Thought/Action/Action Input atau Thought/Final Answer."
