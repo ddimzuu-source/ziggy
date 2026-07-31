@@ -31,7 +31,7 @@ ziggy/
 
 - [x] **Fase 0** — Setup dasar: ReAct loop sederhana + tool `read_file()`
 - [x] **Fase 1** — Tools dasar sistem: `run_command()` dengan whitelist aman (`journalctl`, `systemctl status`), `check_updates()` pakai pacman, loop detection
-- [ ] **Fase 2** — Update handling: `get_changelog()`, `snapshot_config()`, `diff_config_after_update()` untuk nanganin breaking changes rolling release
+- [x] **Fase 2** — Update handling: `get_changelog()`, `snapshot_config()`, `diff_config_after_update()` untuk nanganin breaking changes rolling release
 - [ ] **Fase 3** — RAG: index "war story" (histori fix udev rules, Hyprland 0.56 breaking changes, Waybar dobel bug) ke vector db
 - [ ] **Fase 4** — Auto-fix dengan approval flow (y/n) sebelum eksekusi apapun
 - [ ] **Fase 5** — Showcase: README lengkap, commit history rapi, deploy versi kecil ke cloud
