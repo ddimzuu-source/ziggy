@@ -29,10 +29,19 @@ ATURAN WAJIB:
 - run_command HANYA untuk command read-only. JANGAN mencoba command yang mengubah
   state sistem (restart, install, remove, dll) meskipun diminta - langsung jawab
   jujur belum bisa via Final Answer
+- Untuk pertanyaan tentang PERUBAHAN config atau DAFTAR snapshot, WAJIB panggil tool
+  yang sesuai terlebih dahulu. JANGAN PERNAH menjawab langsung dari asumsi tanpa
+  memanggil tool, meskipun kamu merasa yakin dengan jawabannya.
 - JANGAN PERNAH menulis "Contoh" atau melanjutkan pola contoh di bawah ini.
   Contoh HANYA referensi format, bukan template untuk dilanjutkan.
 - JAWAB HANYA untuk pertanyaan user yang sekarang, jangan buat pertanyaan/skenario baru.
-
+- Untuk pertanyaan tentang BREAKING CHANGES atau BERITA/PERINGATAN sebelum update,
+  WAJIB panggil get_changelog terlebih dahulu. JANGAN menjawab dari asumsi umum
+  atau menyarankan user mengunjungi website sendiri - kamu punya tool untuk itu,
+  GUNAKAN.
+  - JANGAN PERNAH menulis "Contoh" atau melanjutkan pola contoh di bawah ini.
+  - JAWAB HANYA untuk pertanyaan user yang sekarang, jangan buat pertanyaan/skenario baru.
+  
 Referensi format (jangan ditiru isinya, hanya polanya):
 
 [1] Butuh baca file:
@@ -45,27 +54,52 @@ Thought: Perlu cek status/log lewat command read-only.
 Action: run_command
 Action Input: systemctl status NetworkManager
 
-[3] Tidak butuh tool / kemampuan belum ada:
-Thought: Ini pertanyaan umum atau butuh kemampuan yang belum tersedia.
-Final Answer: <jawaban langsung atau pengakuan keterbatasan>
-
-[4] Cek update package sistem:
+[3] Cek update package:
 Thought: User tanya soal update, saya bisa cek pakai check_updates.
 Action: check_updates
 Action Input: -
 
-SEKALI LAGI: jawab hanya untuk pertanyaan user berikut ini, jangan menulis contoh tambahan."""
+[4] Snapshot config sebelum update:
+Thought: User mau backup config sebelum update, saya bisa snapshot.
+Action: snapshot_config
+Action Input: -
 
+[5] Cek daftar snapshot yang pernah dibuat:
+Thought: User tanya daftar snapshot, saya harus cek pakai list_snapshots.
+Action: list_snapshots
+Action Input: -
+
+[6] Cek perubahan config setelah update:
+Thought: User mau tahu apa yang berubah, saya HARUS cek pakai diff_config_after_update,
+tidak boleh menjawab langsung tanpa verifikasi.
+Action: diff_config_after_update
+Action Input: -
+
+[7] Tidak butuh tool / kemampuan belum ada:
+Thought: Ini pertanyaan umum atau butuh kemampuan yang belum tersedia.
+Final Answer: <jawaban langsung atau pengakuan keterbatasan>
+
+[8] Cek breaking changes / changelog sebelum update:
+Thought: User mau tahu ada breaking changes apa sebelum update, saya bisa cek Arch News.
+Action: get_changelog
+Action Input: -
+
+SEKALI LAGI: jawab hanya untuk pertanyaan user berikut ini, jangan menulis contoh tambahan."""
 
 # --- SAFETY NET LEVEL KODE (bukan bergantung ke model) ---
 DESTRUCTIVE_INTENT_KEYWORDS = [
     "restart", "install", "uninstall", "hapus", "remove", "matikan",
-    "stop", "reboot", "shutdown", "kill", "reinstall", "update sistem",
-    "upgrade", "downgrade",
+    "stop", "reboot", "shutdown", "kill", "reinstall", "upgrade", "downgrade",
 ]
 
 def check_destructive_intent(query: str) -> str | None:
     query_lower = query.lower()
+
+    question_indicators = ["apa", "gimana", "bagaimana", "kenapa", "apakah", "ada gak", "ada nggak"]
+    is_question = any(q in query_lower for q in question_indicators)
+    
+    if is_question:
+            return None 
     for kw in DESTRUCTIVE_INTENT_KEYWORDS:
         if kw in query_lower:
             return (
