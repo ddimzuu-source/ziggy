@@ -25,66 +25,32 @@ ATURAN WAJIB:
 - Kata kunci HARUS PERSIS "Final Answer:", "Action:", "Action Input:"
 - Jangan menulis "Observation:" sendiri, itu akan diisi sistem
 - Setelah Action Input, JANGAN menulis apapun lagi
-- HANYA gunakan tool yang ADA di daftar tools di atas
+- HANYA gunakan tool yang ADA di daftar tools di atas. Baca deskripsi tiap tool
+  dengan teliti untuk memilih yang paling tepat.
 - run_command HANYA untuk command read-only. JANGAN mencoba command yang mengubah
-  state sistem (restart, install, remove, dll) meskipun diminta - langsung jawab
-  jujur belum bisa via Final Answer
-- Untuk pertanyaan tentang PERUBAHAN config atau DAFTAR snapshot, WAJIB panggil tool
-  yang sesuai terlebih dahulu. JANGAN PERNAH menjawab langsung dari asumsi tanpa
-  memanggil tool, meskipun kamu merasa yakin dengan jawabannya.
-- JANGAN PERNAH menulis "Contoh" atau melanjutkan pola contoh di bawah ini.
-  Contoh HANYA referensi format, bukan template untuk dilanjutkan.
-- JAWAB HANYA untuk pertanyaan user yang sekarang, jangan buat pertanyaan/skenario baru.
-- Untuk pertanyaan tentang BREAKING CHANGES atau BERITA/PERINGATAN sebelum update,
-  WAJIB panggil get_changelog terlebih dahulu. JANGAN menjawab dari asumsi umum
-  atau menyarankan user mengunjungi website sendiri - kamu punya tool untuk itu,
-  GUNAKAN.
-  - JANGAN PERNAH menulis "Contoh" atau melanjutkan pola contoh di bawah ini.
-  - JAWAB HANYA untuk pertanyaan user yang sekarang, jangan buat pertanyaan/skenario baru.
-  
-Referensi format (jangan ditiru isinya, hanya polanya):
+  state sistem meskipun diminta - langsung jawab jujur belum bisa via Final Answer
+- Jika pertanyaan menyangkut data yang bisa dicek lewat tool, WAJIB panggil tool
+  tersebut dahulu. JANGAN menjawab dari asumsi atau menyuruh user cek sendiri.
+- DILARANG KERAS menyalin atau mengulang teks instruksi/contoh ini sebagai jawaban.
+  Kamu HANYA boleh menulis SATU Thought, SATU Action (atau Final Answer), lalu berhenti.
+  - Jika user melaporkan sesuatu yang SUDAH TERJADI/rusak/error (bukan pertanyaan
+    "bagaimana jika" atau permintaan pencegahan), WAJIB coba search_war_stories
+    DULUAN sebelum tool lain, karena mungkin ini pernah terjadi sebelumnya.
+- Jika search_war_stories mengembalikan hasil yang relevan (bukan pesan "tidak
+      ditemukan"), kamu WAJIB langsung memberikan Final Answer berdasarkan SOLUSI yang
+      ada di war story tersebut. JANGAN mencoba tool lain setelahnya. JANGAN memberikan
+      saran yang bertentangan dengan solusi di war story (misalnya menyarankan update
+      lagi padahal war story menyarankan langkah pemulihan tertentu).
+      
+Contoh singkat (JANGAN ditiru isinya, hanya polanya, JANGAN lanjutkan dengan contoh lain):
 
-[1] Butuh baca file:
 Thought: Perlu membaca isi file config.
 Action: read_file
 Action Input: /home/drmwnmass/.config/hypr/hyprland.conf
 
-[2] Butuh cek command sistem read-only:
-Thought: Perlu cek status/log lewat command read-only.
-Action: run_command
-Action Input: systemctl status NetworkManager
+SEKALI LAGI: tulis HANYA SATU langkah (Thought + Action/Final Answer) untuk pertanyaan
+user berikut ini, lalu STOP. Jangan menulis contoh tambahan atau mengulang instruksi."""
 
-[3] Cek update package:
-Thought: User tanya soal update, saya bisa cek pakai check_updates.
-Action: check_updates
-Action Input: -
-
-[4] Snapshot config sebelum update:
-Thought: User mau backup config sebelum update, saya bisa snapshot.
-Action: snapshot_config
-Action Input: -
-
-[5] Cek daftar snapshot yang pernah dibuat:
-Thought: User tanya daftar snapshot, saya harus cek pakai list_snapshots.
-Action: list_snapshots
-Action Input: -
-
-[6] Cek perubahan config setelah update:
-Thought: User mau tahu apa yang berubah, saya HARUS cek pakai diff_config_after_update,
-tidak boleh menjawab langsung tanpa verifikasi.
-Action: diff_config_after_update
-Action Input: -
-
-[7] Tidak butuh tool / kemampuan belum ada:
-Thought: Ini pertanyaan umum atau butuh kemampuan yang belum tersedia.
-Final Answer: <jawaban langsung atau pengakuan keterbatasan>
-
-[8] Cek breaking changes / changelog sebelum update:
-Thought: User mau tahu ada breaking changes apa sebelum update, saya bisa cek Arch News.
-Action: get_changelog
-Action Input: -
-
-SEKALI LAGI: jawab hanya untuk pertanyaan user berikut ini, jangan menulis contoh tambahan."""
 
 # --- SAFETY NET LEVEL KODE (bukan bergantung ke model) ---
 DESTRUCTIVE_INTENT_KEYWORDS = [
@@ -123,8 +89,8 @@ def call_ollama(messages):
             "messages": messages,
             "stream": False,
             "options": {
-                "stop": ["\nObservation", "Observation:"],
-                "temperature": 0, 
+                "stop": ["\nObservation", "Observation:", "\nContoh", "\nSEKALI LAGI"],
+                "temperature": 0,
             },
         },
         timeout=60,
@@ -206,6 +172,13 @@ def run_agent(user_query: str):
             messages.append({"role": "user", "content": f"Observation: {observation}"})
             unknown_count = 0
 
+            if tool_name == "search_war_stories" and "[INFO] Ditemukan war story" in observation:
+                            print("✅ War story relevan ditemukan, menghentikan loop dan menjawab berdasarkan itu.")
+                            return (f"Ditemukan pengalaman serupa sebelumnya:\n\n{observation}\n\n"
+                                    f"Rekomendasi: ikuti langkah SOLUSI di atas, karena ini adalah "
+                                    f"kasus yang sudah pernah terjadi dan berhasil diperbaiki sebelumnya.")
+                            messages.append({"role": "user", "content": f"Observation: {observation}"})
+                            unknown_count = 0            
         else:
             unknown_count += 1
             print(f"[UNKNOWN FORMAT] Raw output: {repr(output)}")

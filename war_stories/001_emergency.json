@@ -1,0 +1,23 @@
+{
+  "id": "001",
+  "judul": "Emergency Mode setelah update - initramfs gagal karena hook plymouth hilang",
+  "komponen": ["mkinitcpio", "plymouth", "limine", "systemd-boot"],
+  "gejala": "Setelah pacman -Syu dan reboot, sistem tidak masuk ke Hyprland, langsung ke Emergency Mode (terminal hitam). Error: 'Hook plymouth cannot be found', 'mkinitcpio failed for kernel /boot/vmlinuz-linux-cachyos', 'Dependency failed for Initramfs Generation / Local File Systems'.",
+  "penyebab": "Package plymouth ter-uninstall/hilang dependensinya saat update, tapi /etc/mkinitcpio.conf masih punya entri plymouth di baris HOOKS=(...). Saat mkinitcpio otomatis jalan di akhir update kernel, dia cari file plymouth yang sudah tidak ada, proses pembuatan initramfs gagal/crash di tengah jalan.",
+  "solusi": [
+    "Boot dari Live USB CachyOS",
+    "Mount partisi root: sudo mount /dev/sdXy /mnt",
+    "Masuk chroot: cachyos-chroot /mnt",
+    "Edit /etc/mkinitcpio.conf, hapus kata 'plymouth' dari baris HOOKS=(...)",
+    "Regenerasi initramfs: mkinitcpio -P",
+    "Sync bootloader: limine-mkinitcpio",
+    "exit lalu sudo reboot"
+  ],
+  "diagnosis_tools": [
+    "journalctl -xb (cek log boot lengkap, cari baris merah failed)",
+    "systemctl --failed (cek unit systemd yang gagal saat init)",
+    "cek isi /etc/mkinitcpio.conf baris HOOKS=(...)"
+  ],
+  "pencegahan": "Sebelum/sesudah update besar, cek apakah ada package yang ke-remove tapi masih direferensikan di config lain (terutama mkinitcpio.conf). Kalau update melibatkan perubahan splash screen/plymouth, langsung cek HOOKS array setelahnya.",
+  "tanggal": "2026-07-31"
+}

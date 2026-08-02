@@ -7,9 +7,18 @@ import xml.etree.ElementTree as ET
 import difflib
 import shutil
 import json
+import chromadb
 from datetime import datetime
 from pathlib import Path
 from config import ALLOWED_ROOT,  HYPR_CONFIG_DIR, SNAPSHOT_DIR
+
+
+RAG_DB_DIR = "/home/drmwnmass/coding/ziggy/rag/chroma_db"
+RAG_COLLECTION_NAME = "ziggy_war_stories"
+RAG_DISTANCE_THRESHOLD = 1.3  # di atas ini dianggap tidak relevan
+
+_chroma_client = None
+_war_story_collection = None
 
 
 def read_file(filepath: str) -> str:
@@ -61,6 +70,7 @@ def run_command(command_str: str) -> str:
     Tidak pakai shell=True — command di-split jadi list argumen.
     """
     try:
+        command_str = command_str.strip().strip("'\"")
         parts = command_str.strip().split()
         if not parts:
             return "[ERROR] Command kosong."
@@ -363,6 +373,47 @@ def get_changelog(keyword: str = "") -> str:
     except Exception as e:
         return f"[ERROR] Gagal ambil changelog: {e}"
 
+def _get_war_story_collection():
+    """Lazy-load Chroma collection, biar tidak connect tiap kali tools.py diimport."""
+    global _chroma_client, _war_story_collection
+    if _war_story_collection is None:
+        _chroma_client = chromadb.PersistentClient(path=RAG_DB_DIR)
+        _war_story_collection = _chroma_client.get_collection(RAG_COLLECTION_NAME)
+    return _war_story_collection
+
+
+def search_war_stories(query: str) -> str:
+    """
+    Cari war story (pengalaman fix masalah sebelumnya) yang relevan dengan query.
+    Menggunakan semantic search, jadi tidak perlu kata yang persis sama.
+    """
+    try:
+        collection = _get_war_story_collection()
+
+        results = collection.query(query_texts=[query], n_results=2)
+
+        docs = results["documents"][0]
+        distances = results["distances"][0]
+        metadatas = results["metadatas"][0]
+
+        relevant = [
+            (doc, meta) for doc, dist, meta in zip(docs, distances, metadatas)
+            if dist <= RAG_DISTANCE_THRESHOLD
+        ]
+
+        if not relevant:
+            return ("[INFO] Tidak ditemukan war story yang relevan dengan masalah ini. "
+                    "Belum ada pengalaman serupa yang tercatat.")
+
+        report = ["[INFO] Ditemukan war story yang relevan:\n"]
+        for doc, meta in relevant:
+            report.append(f"--- {meta['judul']} ---\n{doc}\n")
+
+        return "\n".join(report)
+
+    except Exception as e:
+        return f"[ERROR] Gagal mencari war story: {e}"
+
 TOOLS = {
     "read_file": {
         "function": read_file,
@@ -383,12 +434,13 @@ TOOLS = {
                 "description": "Cek daftar package yang bisa di-update (pacman -Qu). Input kosong atau '-'.",
             },
             "snapshot_config": {
-                "function": snapshot_config,
-                "description": (
-                    "Buat snapshot (salinan) folder config Hyprland saat ini, diberi timestamp. "
-                    "Berguna sebelum melakukan update sistem. Input kosong atau '-'."
-                ),
-            },
+                    "function": snapshot_config,
+                    "description": (
+                        "HANYA untuk PENCEGAHAN sebelum melakukan update (backup config saat kondisi "
+                        "masih normal/baik-baik saja). JANGAN gunakan ini jika user melaporkan masalah "
+                        "yang sudah terjadi - gunakan search_war_stories untuk itu. Input kosong atau '-'."
+                    ),
+                },
 
             "get_changelog": {
                     "function": get_changelog,
@@ -399,6 +451,17 @@ TOOLS = {
                         "Input: keyword (opsional) atau '-'."
                     ),
                 },
+
+           "search_war_stories": {
+                   "function": search_war_stories,
+                   "description": (
+                       "WAJIB dipanggil PERTAMA KALI jika user melaporkan masalah/error yang SUDAH "
+                       "TERJADI. Input HARUS berupa deskripsi gejala/masalah yang SPESIFIK dan detail "
+                       "(bukan frasa umum seperti 'sudah terjadi' atau 'ada masalah'). "
+                       "Contoh input yang BENAR: 'sistem masuk emergency mode setelah update, "
+                       "hyprland tidak bisa boot'. Contoh input yang SALAH: 'sudah terjadi', 'error'."
+                   ),
+               },
             "list_snapshots": {
                 "function": list_snapshots,
                 "description": "Lihat daftar snapshot config yang pernah dibuat. Input kosong atau '-'.",
