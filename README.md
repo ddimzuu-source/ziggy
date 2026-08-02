@@ -32,7 +32,7 @@ ziggy/
 - [x] **Fase 0** — Setup dasar: ReAct loop sederhana + tool `read_file()`
 - [x] **Fase 1** — Tools dasar sistem: `run_command()` dengan whitelist aman (`journalctl`, `systemctl status`), `check_updates()` pakai pacman, loop detection
 - [x] **Fase 2** — Update handling: `get_changelog()`, `snapshot_config()`, `diff_config_after_update()` untuk nanganin breaking changes rolling release
-- [ ] **Fase 3** — RAG: index "war story" (histori fix udev rules, Hyprland 0.56 breaking changes, Waybar dobel bug) ke vector db
+- [x] **Fase 3** — RAG: index "war story" (histori fix udev rules, Hyprland 0.56 breaking changes, Waybar dobel bug) ke vector db
 - [ ] **Fase 4** — Auto-fix dengan approval flow (y/n) sebelum eksekusi apapun
 - [ ] **Fase 5** — Showcase: README lengkap, commit history rapi, deploy versi kecil ke cloud
 
@@ -54,7 +54,21 @@ Fase 1 selesai. Agent sekarang punya 3 tools: `read_file`, `run_command` (whitel
 - `get_changelog` — cek breaking changes/pengumuman dari Arch Linux News (RSS,
   domain di-whitelist)
 
+**Fase 3**
+ - RAG diimplementasikan menggunakan Chroma sebagai vector
+database, dengan war story pertama (insiden Emergency Mode akibat hook plymouth yang
+hilang) berhasil di-index dan di-retrieve dengan akurat.
 
+ - Tool baru: `search_war_stories` — semantic search terhadap war story yang tersimpan,
+dengan threshold distance untuk memastikan hanya hasil yang benar-benar relevan yang
+dikembalikan.
+
+**Safety net kritis yang ditambahkan**: begitu search_war_stories menemukan war story
+relevan, agent DIPAKSA berhenti dan menjawab berdasarkan itu di level kode — bukan
+mengandalkan model untuk "memilih" mengikuti hasil retrieval. Ini penting karena pada
+pengujian awal, model sempat mengabaikan war story yang sudah ditemukan dan malah
+menyarankan tindakan yang bertentangan (`sudo pacman -Syu` padahal war story
+merekomendasikan pemulihan lewat chroot).
 
 ### Known Limitations
 
