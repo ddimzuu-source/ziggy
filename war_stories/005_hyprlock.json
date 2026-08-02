@@ -1,0 +1,17 @@
+{
+  "id": "005",
+  "judul": "Hyprlock gagal start karena opsi config deprecated, background screenshot gagal",
+  "komponen": ["hyprlock", "hyprland", "lockscreen"],
+  "gejala": "Hyprlock gagal start dengan error: 'config option <general:grace> does not exist', 'config option <general:no_fade_in> does not exist', 'config option <general:no_fade_out> does not exist'. Background Hyprlock (path=screenshot) tampil gelap polos, wallpaper tidak terlihat, disertai warning 'Bogus call to CAsyncResourceManager::screencopyToTexture. This is a bug!'.",
+  "penyebab": "Versi Hyprlock terbaru (v0.9.6) menghapus opsi general:grace, general:no_fade_in, general:no_fade_out tanpa pengganti. Selain itu, path=screenshot di config Hyprlock memicu bug internal screencopyToTexture yang membuat capture layar real-time gagal dan fallback ke warna solid gelap.",
+  "solusi": [
+    "Hapus opsi deprecated dari config Hyprlock, sisakan hanya yang masih valid, contoh blok general: hide_cursor = true",
+    "Ganti background dari mode screenshot ke path wallpaper statis langsung: background { path = /home/<username>/Pictures/wallpaper.jpg }",
+    "Verifikasi dengan jalankan manual: hyprlock"
+  ],
+  "diagnosis_tools": [
+    "hyprlock (jalankan manual di terminal untuk menangkap pesan error langsung)"
+  ],
+  "pencegahan": "Setelah update Hyprlock ke versi baru, cek changelog resmi untuk opsi general yang deprecated sebelum reload/restart. Hindari path=screenshot sebagai background kalau sering muncul bug screencopyToTexture, pakai path wallpaper statis sebagai gantinya.",
+  "tanggal": "2026-08-01"
+}

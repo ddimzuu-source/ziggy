@@ -1,0 +1,19 @@
+{
+  "id": "004",
+  "judul": "Dolphin masih pakai color scheme Noctalia lama, tidak konsisten dengan tema baru",
+  "komponen": ["dolphin", "kdeglobals", "dolphinrc", "kwriteconfig6"],
+  "gejala": "Dolphin masih menampilkan skema warna 'Noctalia' padahal shell Noctalia sudah tidak dipakai lagi, tidak konsisten dengan tema monokrom yang baru diterapkan.",
+  "penyebab": "File dolphinrc dan kdeglobals masih menyimpan referensi ColorScheme=Noctalia dari eksperimen shell sebelumnya yang sudah ditinggalkan, tidak ter-update otomatis saat pindah tema.",
+  "solusi": [
+    "Buat color scheme custom di ~/.local/share/color-schemes/Monochrome.colors",
+    "Terapkan ke sistem: kwriteconfig6 --file ~/.config/kdeglobals --group General --key ColorScheme Monochrome",
+    "Terapkan khusus ke Dolphin: kwriteconfig6 --file ~/.config/dolphinrc --group UiSettings --key ColorScheme Monochrome",
+    "Restart Dolphin: killall dolphin && dolphin & disown"
+  ],
+  "diagnosis_tools": [
+    "cat ~/.config/dolphinrc (cek color scheme yang dipakai Dolphin)",
+    "cat ~/.config/kdeglobals | grep -A3 '[General]' (cek color scheme global KDE)"
+  ],
+  "pencegahan": "Kalau pindah/eksperimen shell atau tema desktop, cek dan bersihkan referensi ColorScheme lama di kdeglobals dan dolphinrc supaya tidak ada sisa konfigurasi yang tidak relevan lagi.",
+  "tanggal": "2026-08-01"
+}

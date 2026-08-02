@@ -1,0 +1,24 @@
+{
+  "id": "003",
+  "judul": "Waybar muncul dobel (double instance) dan modul tidak berfungsi",
+  "komponen": ["waybar", "hyprland", "exec-once", "css"],
+  "gejala": "Dua instance Waybar muncul bertumpuk di layar (baris atas & bawah). Waybar ikut mati kalau terminal Kitty yang menjalankannya ditutup. Klik ikon Bluetooth/Wifi tidak merespons. Ikon brightness custom tidak tampil di bar. Semua modul tampil flat tanpa background/warna sama sekali.",
+  "penyebab": "1) Dua baris 'exec-once = waybar' terdaftar di dua file berbeda (configs/Startup_Apps.conf bawaan dan UserConfigs/Startup_Apps.conf user) - jadi 2 proses Waybar jalan bersamaan. 2) Waybar dijalankan manual dari dalam terminal tanpa detach, jadi jadi child process dan ikut mati saat terminal ditutup. 3) Config bluetooth/wifi mereferensikan command 'omarchy-launch-bluetooth' dan 'omarchy-launch-wifi' - bagian dari dotfiles lain (Omarchy) yang tidak terpasang di sistem ini. 4) Modul custom belum didaftarkan ke selector CSS yang nentuin background-color/padding/color, dan height/font-size belum diset eksplisit di config.jsonc.",
+  "solusi": [
+    "Hapus baris exec-once duplikat, sisakan satu saja: sed -i '/exec-once = waybar/d' ~/.config/hypr/configs/Startup_Apps.conf",
+    "Jalankan Waybar dengan detach penuh: killall -9 waybar; nohup waybar > /dev/null 2>&1 & disown",
+    "Ganti command Bluetooth/Wifi ke tool yang tersedia: sudo pacman -S blueman, lalu di config.jsonc set on-click ke 'blueman-manager' (bluetooth) dan 'kitty nmtui' (network)",
+    "Tambahkan height dan font-size eksplisit di config.jsonc (contoh: height: 34) dan style.css (font-size: 14px)",
+    "Definisikan warna CSS di awal style.css: @define-color background rgba(20,20,20,0.5); @define-color foreground #e0e0e0;"
+  ],
+  "diagnosis_tools": [
+    "pgrep -a waybar (cek berapa banyak proses Waybar yang jalan)",
+    "ps -o pid,ppid,tty,cmd -p $(pgrep waybar) (cek apakah Waybar child process dari terminal)",
+    "grep -rn 'waybar' ~/.config/hypr/configs/Startup_Apps.conf ~/.config/hypr/UserConfigs/Startup_Apps.conf (cari sumber duplikasi exec-once)",
+    "waybar (jalankan manual di foreground untuk lihat error langsung)",
+    "which omarchy-launch-bluetooth omarchy-launch-wifi (cek command yang direferensikan config benar-benar terpasang)",
+    "head -5 ~/.config/waybar/style.css (cek definisi warna CSS)"
+  ],
+  "pencegahan": "Kalau pakai dotfiles template, selalu cek apakah exec-once sudah terdaftar di file lain sebelum menambah baris baru sendiri. Selalu jalankan Waybar dengan nohup+disown atau lewat exec-once Hyprland, jangan manual di terminal foreground. Setelah ganti/kustomisasi dotfiles dari template lain, cek command eksternal yang direferensikan benar-benar ada di sistem (which <command>).",
+  "tanggal": "2026-08-01"
+}

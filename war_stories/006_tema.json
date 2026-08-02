@@ -1,0 +1,20 @@
+{
+  "id": "006",
+  "judul": "SDDM login screen tetap tampil tema default, tema custom tidak ter-apply",
+  "komponen": ["sddm", "login-manager", "greeter"],
+  "gejala": "SDDM (login screen) tetap menampilkan tema default biru Aero-style, bukan tema custom yang sudah dipasang di /usr/share/sddm/themes/.",
+  "penyebab": "Tidak ada file override di /etc/sddm.conf.d/, sehingga SDDM memakai tema bawaan compile-time. Setelah tema custom dipasang dan wallpaper diarahkan ke path di /home/<user>/, wallpaper tetap tidak muncul karena SDDM berjalan sebagai user 'sddm' yang tidak memiliki akses baca ke folder home user biasa (permission default 750).",
+  "solusi": [
+    "Pasang tema custom ke /usr/share/sddm/themes/<nama>/",
+    "PENTING: simpan wallpaper DI DALAM folder tema itu sendiri (/usr/share/sddm/themes/<nama>/backgrounds/), BUKAN di folder home user, untuk menghindari masalah permission",
+    "Buat file override: sudo mkdir -p /etc/sddm.conf.d, lalu buat /etc/sddm.conf.d/theme.conf berisi [Theme] Current=<nama-tema>",
+    "Restart SDDM: sudo systemctl restart sddm"
+  ],
+  "diagnosis_tools": [
+    "journalctl -u sddm -b --no-pager | tail -50 (cek log SDDM saat proses greeter start)",
+    "ls -ld /home/<username> (cek permission folder home terhadap user service sddm)",
+    "cat /usr/share/sddm/themes/<nama-tema>/theme.conf (cek path & opsi tema valid)"
+  ],
+  "pencegahan": "SDDM berjalan sebagai user service terpisah dengan akses terbatas — selalu taruh aset (wallpaper, dll) di dalam folder tema sendiri, jangan mengandalkan path ke folder home user manapun.",
+  "tanggal": "2026-08-01"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "007",
+  "judul": "Starship prompt tampil logo Arch default, bukan logo CachyOS",
+  "komponen": ["starship", "starship.toml", "kitty", "fish"],
+  "gejala": "Prompt Starship menampilkan logo Arch Linux default atau simbol fallback, bukan logo CachyOS. Saat coba tambah opsi 'cachyos' (huruf kecil) di config, muncul warning: '[WARN] - (starship::config): Failed to load config value: Error in OS at symbols: unknown variant cachyos, expected one of AIX, ..., CachyOS, ...'.",
+  "penyebab": "Starship bersifat case-sensitive. Parser TOML Starship hanya menerima varian OS dalam format PascalCase (CachyOS), bukan huruf kecil (cachyos). Config awal hanya mendefinisikan Arch, sementara untuk mendeteksi CachyOS butuh entri 'CachyOS' (kapital sesuai PascalCase) di tabel [os.symbols].",
+  "solusi": [
+    "Buka ~/.config/starship.toml, cari blok [os.symbols]",
+    "Hapus entri 'cachyos' huruf kecil, ganti dengan format PascalCase yang benar: CachyOS = \"symbol\"",
+    "Contoh isi yang benar: [os.symbols] lalu baris CachyOS = simbol, Arch = simbol, Unknown = simbol",
+    "Buka terminal baru atau reload shell untuk menerapkan config tanpa warning"
+  ],
+  "diagnosis_tools": [
+    "cek isi ~/.config/starship.toml, khususnya blok [os.symbols]",
+    "buka terminal baru dan perhatikan warning log dari parser Starship saat startup"
+  ],
+  "pencegahan": "Saat menambah varian OS baru di config Starship (atau tool lain yang parsing TOML/YAML case-sensitive), selalu cek dokumentasi resmi untuk format penulisan yang tepat (PascalCase/camelCase/dll), jangan asumsi huruf kecil biasa selalu diterima.",
+  "tanggal": "2026-08-01"
+}

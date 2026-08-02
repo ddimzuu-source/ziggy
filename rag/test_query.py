@@ -10,9 +10,17 @@ client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
 collection = client.get_collection(COLLECTION_NAME)
 
 queries = [
-    "sistem gak bisa boot masuk emergency mode",
-    "kenapa hyprland gak muncul setelah update",
-    "resep membuat rendang",  # ini sengaja gak relevan, buat lihat behavior-nya
+    "waybar muncul dua kali di layar",       # harus ketemu #003
+    "hyprlock error pas mau lock screen",     # harus ketemu #004
+    "abis update hyprland config error semua",  # harus ketemu #002
+    "sistem masuk emergency mode gabisa boot",   # harus ketemu #001
+    "hyprlock error pas mau lock screen",
+    "kenapa sddm masih tema default",    
+    "logo distro di terminal ku salah, kok jadi arch bukan cachyos",
+    "prompt terminal ku background-nya putus putus gak nyambung",
+    "install paket AUR error 404 gagal download",
+    "pacman gagal update gara-gara mirror",
+    ----
 ]
 
 for q in queries:

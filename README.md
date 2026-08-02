@@ -68,7 +68,26 @@ relevan, agent DIPAKSA berhenti dan menjawab berdasarkan itu di level kode — b
 mengandalkan model untuk "memilih" mengikuti hasil retrieval. Ini penting karena pada
 pengujian awal, model sempat mengabaikan war story yang sudah ditemukan dan malah
 menyarankan tindakan yang bertentangan (`sudo pacman -Syu` padahal war story
-merekomendasikan pemulihan lewat chroot).
+merekomendasikan pemulihan lewat chroot). 
+
+Fase 3 (RAG) berjalan dengan 9 war story ter-index di Chroma vector database, mencakup:
+
+1. Emergency Mode setelah update - initramfs gagal karena hook plymouth hilang
+2. Hyprland config error - opsi deprecated dan file config kosong
+3. Waybar muncul dobel (double instance) dan modul tidak berfungsi
+4. Dolphin masih pakai color scheme lama
+5. Hyprlock gagal start karena opsi deprecated
+6. SDDM tetap tampil tema default
+7. Starship menampilkan logo Arch, bukan CachyOS (case-sensitive config)
+8. Starship prompt background pill/powerline terputus
+9. Instalasi paket AUR gagal - mirror pacman 404
+
+**Evaluasi retrieval:** diuji dengan berbagai query dalam bahasa natural (bukan
+menyalin persis istilah teknis dari war story). Akurasi top-1 match tinggi setelah
+dua putaran perbaikan data (lihat "Prinsip Desain War Story" di bawah).
+
+Tool baru: `search_war_stories` — semantic search terhadap war story, dengan threshold
+distance untuk memastikan hanya hasil yang benar-benar relevan yang dikembalikan.
 
 ### Known Limitations
 
@@ -87,7 +106,14 @@ merekomendasikan pemulihan lewat chroot).
   dipertimbangkan lagi.
 - Model kadang menambahkan detail kecil yang tidak akurat di narasi jawaban akhir
   meski action yang dijalankan sendiri tetap aman dan sesuai whitelist.
-
+- Model kadang menjawab pertanyaan follow-up dari asumsi/pengetahuan umum alih-alih
+  memanggil tool untuk verifikasi data aktual, meski instruksi eksplisit sudah
+  ditambahkan.
+- Model kadang menambahkan detail kecil yang tidak akurat di narasi jawaban akhir
+  meski action yang dijalankan sendiri tetap aman dan sesuai whitelist.
+- Retrieval RAG sensitif terhadap pemilihan kata di query user; war story perlu
+  ditulis dengan variasi bahasa yang cukup luas di field GEJALA agar robust terhadap
+  cara user mengungkapkan masalah secara natural.
 
 
 ## Ide Pengembangan Masa Depan (belum dieksekusi)
@@ -111,12 +137,26 @@ Soal loop-repetition: ini yang menarik, dua-duanya sama-sama bisa ngulang comman
 
 Soal kecepatan: 3b konsisten ~1.5-2.5x lebih lambat (24-31s vs 11-19s buat query yang butuh tool call). Test 6 jadi pengecualian bagus (6.5s, karena cuma 1x panggil bersih).
 
-## Kesimpulan Saat Ini 
-Berdasarkan data ini, 3b sedikit lebih baik dari sisi tool-selection accuracy (terutama Test 2), tapi:
+### Revisi Keputusan Model (Fase 3)
 
- - Trade-off kecepatan nyata (~2x lebih lambat)
- - Bug loop-repetition masih ada di 3b juga — jadi bukan solusi ajaib
- - Selisih akurasi cuma keliatan jelas di 1 dari 6 test, sisanya setara
+Keputusan awal (akhir Fase 2) mempertahankan `qwen2.5-coder:1.5b` karena selisih akurasi
+dengan 3b tidak signifikan dalam 6 skenario test saat itu. Namun di awal Fase 3, penambahan
+tool `search_war_stories` mengungkap masalah yang lebih serius: 1.5b gagal memilih tool
+yang tepat di antara beberapa tool dengan use-case mirip secara semantik, bahkan setelah
+prompt disederhanakan drastis. Keputusan direvisi ke `qwen2.5-coder:3b` mulai Fase 3,
+menerima trade-off kecepatan (~1.5-2x lebih lambat) demi keandalan pemilihan tool.
+
+### Prinsip Desain War Story (ditemukan lewat testing empiris)
+
+1. **Satu war story = satu masalah spesifik.** Percobaan awal menggabungkan 3
+   sub-masalah (Dolphin, Hyprlock, SDDM) dalam 1 war story menurunkan akurasi
+   retrieval signifikan - war story "encer" (topik campur) kalah bersaing melawan
+   war story lain yang topiknya padat/fokus, bahkan untuk query yang jelas-jelas
+   menyebut nama komponen yang tepat.
+2. **Field GEJALA sebaiknya memuat variasi bahasa** - istilah teknis maupun parafrase
+   natural/kasual - karena user tidak selalu menggunakan kosakata yang sama dengan
+   yang tercatat di war story asli (contoh: "background putus putus" vs "pill
+   powerline terputus").
 
 ## Jalanin Sendiri
 

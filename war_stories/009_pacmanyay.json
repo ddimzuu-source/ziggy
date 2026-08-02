@@ -1,0 +1,19 @@
+{
+  "id": "009",
+  "judul": "Instalasi paket AUR gagal - mirror pacman 404 not found, file signature hilang",
+  "komponen": ["pacman", "yay", "AUR", "mirror", "cachyos-rate-mirrors"],
+  "gejala": "Instalasi paket dari AUR (misal spotube-bin) via yay/paru gagal di tengah proses download dependensi. Error: 'error: failed retrieving file luajit-...sig from mirror.krfoss.org: The requested URL returned error: 404', 'warning: failed to retrieve some files', 'error: failed to commit transaction (failed to retrieve some files)'.",
+  "penyebab": "Mirror lokal yang dipakai (contoh: mirror.krfoss.org) out of sync/tertinggal dari repo utama CachyOS - file signature (.sig) yang dicari pacman sudah tidak ada lagi di mirror tersebut karena repo sudah update tapi mirror lokal belum. Cache pacman lokal juga masih menyimpan info file versi lama yang sudah terhapus di server mirror.",
+  "solusi": [
+    "Update dan rank ulang mirror CachyOS ke yang paling up-to-date: sudo cachyos-rate-mirrors",
+    "Bersihkan cache pacman dari file lama/corrupt: sudo pacman -Sc",
+    "Jalankan full system upgrade dulu sebelum install paket baru, supaya database & dependensi tersinkron penuh (cegah partial upgrade): yay -Syu",
+    "Baru install ulang paket yang gagal: yay -S spotube-bin",
+    "Alternatif kalau masih gagal, pakai skrip resmi CachyOS: cachy-update, lalu yay -S spotube-bin"
+  ],
+  "diagnosis_tools": [
+    "baca kode HTTP error di pesan pacman/yay - 404 berarti file sudah tidak ada di mirror tersebut"
+  ],
+  "pencegahan": "Sebelum install paket AUR yang butuh banyak dependensi, jalankan cachyos-rate-mirrors dulu untuk memastikan mirror yang dipakai up-to-date. Selalu full upgrade (-Syu) sebelum install paket baru untuk mencegah partial upgrade yang bisa memicu error dependency/mirror seperti ini.",
+  "tanggal": "2026-08-01"
+}

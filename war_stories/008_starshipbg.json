@@ -1,0 +1,18 @@
+{
+  "id": "008",
+  "judul": "Starship prompt teks mepet dan background pill/powerline terputus",
+  "komponen": ["starship", "starship.toml", "powerline"],
+  "gejala": "Ikon OS dan username berhasil tampil tapi teksnya menempel erat tanpa spasi. Ketika spasi ditambahkan langsung di variabel global format = \"\"\"...\"\"\", background warna pill (powerline style) malah patah/terputus - muncul celah tanpa warna di antara segmen. Tampilan prompt terminal jadi putus-putus, warna background tidak nyambung mulus antar bagian, terlihat rusak/patah-patah di beberapa titik.",
+  "penyebab": "Spasi diletakkan di luar pemetaan style modul (di format global), bukan di dalam format masing-masing modul. Karena spasi di luar style dianggap karakter tanpa background, rendering warna pill jadi terputus di titik itu.",
+  "solusi": [
+    "Jangan taruh spasi di format global (variabel format = \"\"\"...\"\"\" di top-level starship.toml)",
+    "Pindahkan spasi ke DALAM format masing-masing modul, contoh untuk [os]: format = \"[$symbol ]($style)\" (spasi setelah $symbol, di dalam tanda kurung style)",
+    "Sama untuk [username]: format = '[$user ]($style)'",
+    "Pastikan warna fg pada karakter pemisah/separator () cocok dengan warna bg segmen sebelumnya, dan warna bg-nya cocok dengan segmen berikutnya, supaya transisi warna pill mulus"
+  ],
+  "diagnosis_tools": [
+    "inspeksi string format global di starship.toml, cek posisi spasi relatif terhadap style mapping tiap modul"
+  ],
+  "pencegahan": "Di Starship (dan tool prompt berbasis powerline lain), selalu taruh spasi/padding DI DALAM format modul yang punya style/background, bukan di format global gabungan - supaya warna background ikut ter-render di area spasi tersebut.",
+  "tanggal": "2026-08-01"
+}

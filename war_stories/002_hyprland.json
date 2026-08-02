@@ -1,0 +1,22 @@
+{
+  "id": "002",
+  "judul": "Hyprland config error - opsi deprecated dan file config kosong (0 byte)",
+  "komponen": ["hyprland", "hyprland.conf", "JaKooLit dotfiles"],
+  "gejala": "Custom keybind (Fn brightness/volume) hilang setiap update/reload. Error saat hyprctl reload: 'config option <dwindle:pseudotile> does not exist', 'config option <misc:vfr> does not exist', 'config option <gestures:workspace_swipe> does not exist', 'invalid field float: missing a value', 'invalid field class:^(pavucontrol)$: missing a value'. File hyprland.conf pernah ditemukan 0 byte (kosong total).",
+  "penyebab": "1) Edit dilakukan langsung di hyprland.conf (dikelola dotfiles/system), bukan di UserConfigs/ (folder khusus kustomisasi user) - jadi tertimpa ulang. 2) Breaking changes Hyprland versi 0.55-0.56: opsi dwindle:pseudotile dan gestures:workspace_swipe dihapus tanpa pengganti, misc:vfr pindah ke debug:vfr, syntax windowrule di-overhaul total (field matcher wajib prefix 'match:', field seperti float butuh value eksplisit on/off). 3) File config sempat ter-overwrite jadi 0 byte, kemungkinan command shell redirect '>' yang salah alih-alih '>>'.",
+  "solusi": [
+    "Pindahkan semua kustomisasi ke UserConfigs/, bukan hyprland.conf inti: micro ~/.config/hypr/UserConfigs/UserKeybinds.conf",
+    "Jika hyprland.conf kosong, rekonstruksi dari source resmi dotfiles (berisi daftar source= ke configs/ dan UserConfigs/)",
+    "Hapus opsi deprecated: hapus baris 'pseudotile = true' di blok dwindle, hapus baris 'vfr = true' di blok misc, kosongkan blok gestures { }",
+    "Perbaiki syntax windowrule ke format terbaru: windowrule = float on, match:class pavucontrol",
+    "Verifikasi dengan: hyprctl reload (harus keluar 'ok' tanpa 'Config error in file...')"
+  ],
+  "diagnosis_tools": [
+    "hyprctl reload (cek status parsing config, error muncul jika ada baris 'Config error in file...')",
+    "wc -l ~/.config/hypr/hyprland.conf dan ls -la ~/.config/hypr/hyprland.conf (cek ukuran file, waspada jika 0 byte)",
+    "grep '^source' ~/.config/hypr/hyprland.conf (cek struktur source config)",
+    "hyprctl binds | head -30 (verifikasi keybind benar-benar terdaftar)"
+  ],
+  "pencegahan": "Selalu edit kustomisasi di folder UserConfigs/, jangan pernah langsung edit hyprland.conf inti kalau pakai dotfiles berbasis template (JaKooLit dkk). Setelah update Hyprland ke versi baru, cek changelog resmi untuk opsi yang deprecated/dipindah namespace sebelum reload. Hati-hati pakai redirect '>' di shell terhadap file config penting - pastikan pakai '>>' kalau maksudnya append.",
+  "tanggal": "2026-08-01"
+}
